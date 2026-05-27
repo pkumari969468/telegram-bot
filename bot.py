@@ -20,7 +20,7 @@ def keep_alive():
 
 # ========= BOT TOKEN =========
 
-TOKEN = "8702770051:AAFpiHtOkiltfZ1mxqyFUTMG7smDOlmiyLc"
+TOKEN = "8702770051:AAGOZqOSi62PQmcYYdibmqVu3lwd-J4WmtU"
 
 bot = telebot.TeleBot(TOKEN)
 
