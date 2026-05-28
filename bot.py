@@ -215,7 +215,7 @@ print("Bot Started ✅")
 
 bot.remove_webhook()
 
-RENDER_URL = "https://YOUR-RENDER-URL.onrender.com"
+RENDER_URL = "https://mybot-cnv1.onrender.com"
 
 bot.set_webhook(
     url=f"{RENDER_URL}/{TOKEN}"
