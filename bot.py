@@ -2,14 +2,15 @@ from flask import Flask, request
 import telebot
 from pymongo import MongoClient
 import os
+import time
 
-# ========= BOT TOKEN =========
+# ================= TOKEN =================
 
 TOKEN = "8702770051:AAGOZqOSi62PQmcYYdibmqVu3lwd-J4WmtU"
 
-# ========= MONGODB =========
+# ================= MONGODB =================
 
-MONGO_URL = "mongodb+srv://pkumari969468_db_user:8WfLlHMlDH7syb4G@teligrambot.ec5liii.mongodb.net/?appName=Teligrambot"
+MONGO_URL = "mongodb+srv://pkumari969468_db_user:8WfLlHMlDH7syb4G@teligrambot.ec5liii.mongodb.net/?retryWrites=true&w=majority&appName=Teligrambot"
 
 client = MongoClient(MONGO_URL)
 
@@ -17,20 +18,20 @@ db = client["telegram_bot"]
 
 users_collection = db["users"]
 
-# ========= BOT =========
+# ================= BOT =================
 
 bot = telebot.TeleBot(TOKEN)
 
-# ========= FLASK =========
+# ================= FLASK =================
 
 app = Flask(__name__)
 
-# ========= START COMMAND =========
+# ================= START COMMAND =================
 
 @bot.message_handler(commands=['start'])
 def start(message):
 
-    user_id = str(message.chat.id)
+    user_id = message.chat.id
 
     existing_user = users_collection.find_one(
         {"user_id": user_id}
@@ -75,7 +76,7 @@ def start(message):
         reply_markup=markup
     )
 
-# ========= BUTTON REPLY =========
+# ================= BUTTON REPLY =================
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
@@ -108,7 +109,7 @@ def callback(call):
             "https://t.me/+UPBBtW3bii8xZDdl"
         )
 
-# ========= USERS COMMAND =========
+# ================= USERS COMMAND =================
 
 @bot.message_handler(commands=['users'])
 def total_users(message):
@@ -120,7 +121,7 @@ def total_users(message):
         f"Total Users: {count}"
     )
 
-# ========= BROADCAST =========
+# ================= BROADCAST =================
 
 @bot.message_handler(commands=['broadcast'])
 def broadcast(message):
@@ -190,10 +191,12 @@ def broadcast(message):
         f"Broadcast Sent To {sent} Users ✅"
     )
 
-# ========= WEBHOOK =========
+# ================= WEBHOOK =================
 
 @app.route(f"/{TOKEN}", methods=['POST'])
 def webhook():
+
+    print("Webhook Hit")
 
     json_str = request.get_data().decode('UTF-8')
 
@@ -203,17 +206,19 @@ def webhook():
 
     return "OK", 200
 
-# ========= HOME =========
+# ================= HOME =================
 
 @app.route('/')
 def home():
     return "Bot Running ✅"
 
-# ========= START =========
+# ================= START =================
 
 print("Bot Started ✅")
 
 bot.remove_webhook()
+
+time.sleep(1)
 
 RENDER_URL = "https://mybot-cnv1.onrender.com"
 
