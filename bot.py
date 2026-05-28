@@ -3,17 +3,24 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pymongo import MongoClient
 import threading
-import time
 import schedule
-import os
+import time
 
 # ================= TOKEN =================
 
 TOKEN = "8702770051:AAGt1WgLNqYKprabfI7hEDA14qzQnThvpQQ"
 
-# ================= ADMIN ID =================
+# ================= ADMIN =================
 
 ADMIN_ID = 123456789
+
+# ================= BOT =================
+
+bot = telebot.TeleBot(TOKEN)
+
+# ================= FLASK =================
+
+app = Flask(__name__)
 
 # ================= MONGODB =================
 
@@ -24,12 +31,6 @@ client = MongoClient(MONGO_URL)
 db = client["telegram_bot"]
 
 users_collection = db["users"]
-
-# ================= BOT =================
-
-bot = telebot.TeleBot(TOKEN)
-
-app = Flask(__name__)
 
 # ================= AUTO MESSAGE =================
 
@@ -69,7 +70,7 @@ schedule.every().day.at("07:00").do(send_good_morning)
 
 schedule.every().day.at("22:00").do(send_good_night)
 
-def run_schedule():
+def scheduler_loop():
 
     while True:
 
@@ -77,7 +78,10 @@ def run_schedule():
 
         time.sleep(1)
 
-threading.Thread(target=run_schedule).start()
+threading.Thread(
+    target=scheduler_loop,
+    daemon=True
+).start()
 
 # ================= START =================
 
@@ -98,30 +102,29 @@ def start(message):
 
     markup = InlineKeyboardMarkup()
 
-    btn1 = InlineKeyboardButton(
-        "🇮🇳 Indian",
-        callback_data="indian"
+    markup.add(
+        InlineKeyboardButton(
+            "🇮🇳 Indian",
+            callback_data="indian"
+        ),
+
+        InlineKeyboardButton(
+            "🇵🇰 Pakistani",
+            callback_data="pakistani"
+        )
     )
 
-    btn2 = InlineKeyboardButton(
-        "🇵🇰 Pakistani",
-        callback_data="pakistani"
-    )
+    markup.add(
+        InlineKeyboardButton(
+            "🇷🇺 Russian",
+            callback_data="russian"
+        ),
 
-    btn3 = InlineKeyboardButton(
-        "🇷🇺 Russian",
-        callback_data="russian"
+        InlineKeyboardButton(
+            "🔥 Latest",
+            callback_data="latest"
+        )
     )
-
-    btn4 = InlineKeyboardButton(
-        "🔥 Latest",
-        callback_data="latest"
-    )
-
-    markup.add(btn1)
-    markup.add(btn2)
-    markup.add(btn3)
-    markup.add(btn4)
 
     bot.send_message(
         message.chat.id,
@@ -129,21 +132,24 @@ def start(message):
         reply_markup=markup
     )
 
-# ================= BUTTONS =================
+# ================= BUTTON =================
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
 
     links = {
 
-        "indian": "https://t.me/+-FNft_vu2bVlMjA1",
+        "indian":
+        "https://t.me/+-FNft_vu2bVlMjA1",
 
-        "pakistani": "https://t.me/+Kv6gjLUO31Q3Yzg1",
+        "pakistani":
+        "https://t.me/+Kv6gjLUO31Q3Yzg1",
 
-        "russian": "https://t.me/+Os2eJeUY4S5kZTRl",
+        "russian":
+        "https://t.me/+Os2eJeUY4S5kZTRl",
 
-        "latest": "https://t.me/+UPBBtW3bii8xZDdl"
-
+        "latest":
+        "https://t.me/+UPBBtW3bii8xZDdl"
     }
 
     if call.data in links:
@@ -172,7 +178,12 @@ def users(message):
 
 @bot.message_handler(
     commands=['broadcast'],
-    content_types=['text', 'photo', 'video', 'document']
+    content_types=[
+        'text',
+        'photo',
+        'video',
+        'document'
+    ]
 )
 def broadcast(message):
 
@@ -187,7 +198,10 @@ def broadcast(message):
 
     if message.text and message.text.startswith("/broadcast"):
 
-        text = message.text.replace("/broadcast ", "")
+        text = message.text.replace(
+            "/broadcast ",
+            ""
+        )
 
         for user in users:
 
@@ -274,7 +288,7 @@ def broadcast(message):
 
     bot.reply_to(
         message,
-        f"✅ Broadcast Sent To {sent} Users"
+        f"✅ Sent To {sent} Users"
     )
 
 # ================= WEBHOOK =================
@@ -282,9 +296,11 @@ def broadcast(message):
 @app.route(f"/{TOKEN}", methods=['POST'])
 def webhook():
 
-    json_str = request.get_data().decode('UTF-8')
+    json_str = request.get_data().decode("UTF-8")
 
-    update = telebot.types.Update.de_json(json_str)
+    update = telebot.types.Update.de_json(
+        json_str
+    )
 
     bot.process_new_updates([update])
 
@@ -303,11 +319,4 @@ bot.remove_webhook()
 
 bot.set_webhook(
     url=f"https://mybot-cnv1.onrender.com/{TOKEN}"
-)
-
-print("Bot Started ✅")
-
-app.run(
-    host="0.0.0.0",
-    port=int(os.environ.get("PORT", 10000))
-)
+                )
