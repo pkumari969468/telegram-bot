@@ -1,5 +1,3 @@
 pyTelegramBotAPI
 Flask
-pymongo
-dnspython
 gunicorn
