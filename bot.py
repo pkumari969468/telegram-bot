@@ -1,36 +1,29 @@
-from flask import Flask
-from threading import Thread
+from flask import Flask, request
 import telebot
+from pymongo import MongoClient
 import os
-
-# ========= KEEP ALIVE =========
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def run():
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
 
 # ========= BOT TOKEN =========
 
 TOKEN = "8702770051:AAGOZqOSi62PQmcYYdibmqVu3lwd-J4WmtU"
 
+# ========= MONGODB =========
+
+MONGO_URL = "mongodb+srv://pkumari969468_db_user:8WfLlHMlDH7syb4G@teligrambot.ec5liii.mongodb.net/?appName=Teligrambot"
+
+client = MongoClient(MONGO_URL)
+
+db = client["telegram_bot"]
+
+users_collection = db["users"]
+
+# ========= BOT =========
+
 bot = telebot.TeleBot(TOKEN)
 
-# ========= USERS LOAD =========
+# ========= FLASK =========
 
-if os.path.exists("users.txt"):
-    with open("users.txt", "r") as f:
-        users = f.read().splitlines()
-else:
-    users = []
+app = Flask(__name__)
 
 # ========= START COMMAND =========
 
@@ -39,32 +32,95 @@ def start(message):
 
     user_id = str(message.chat.id)
 
-    if user_id not in users:
+    existing_user = users_collection.find_one(
+        {"user_id": user_id}
+    )
 
-        users.append(user_id)
+    if not existing_user:
 
-        with open("users.txt", "a") as f:
-            f.write(user_id + "\n")
+        users_collection.insert_one(
+            {"user_id": user_id}
+        )
 
-    bot.reply_to(message, """
-🔥 Welcome ❤️
+    markup = telebot.types.InlineKeyboardMarkup()
 
-Aapka request receive ho gaya hai ✅
+    btn1 = telebot.types.InlineKeyboardButton(
+        "🇮🇳 Indian",
+        callback_data="indian"
+    )
 
-Bot active hai 🚀
-""")
+    btn2 = telebot.types.InlineKeyboardButton(
+        "🇵🇰 Pakistani",
+        callback_data="pakistani"
+    )
+
+    btn3 = telebot.types.InlineKeyboardButton(
+        "🇷🇺 Russian",
+        callback_data="russian"
+    )
+
+    btn4 = telebot.types.InlineKeyboardButton(
+        "🔥 Latest",
+        callback_data="latest"
+    )
+
+    markup.add(btn1)
+    markup.add(btn2)
+    markup.add(btn3)
+    markup.add(btn4)
+
+    bot.send_message(
+        message.chat.id,
+        "🔥 Welcome ❤️\n\nChoose Option Below 👇",
+        reply_markup=markup
+    )
+
+# ========= BUTTON REPLY =========
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback(call):
+
+    if call.data == "indian":
+
+        bot.send_message(
+            call.message.chat.id,
+            "https://t.me/+-FNft_vu2bVlMjA1"
+        )
+
+    elif call.data == "pakistani":
+
+        bot.send_message(
+            call.message.chat.id,
+            "https://t.me/+Kv6gjLUO31Q3Yzg1"
+        )
+
+    elif call.data == "russian":
+
+        bot.send_message(
+            call.message.chat.id,
+            "https://t.me/+Os2eJeUY4S5kZTRl"
+        )
+
+    elif call.data == "latest":
+
+        bot.send_message(
+            call.message.chat.id,
+            "https://t.me/+UPBBtW3bii8xZDdl"
+        )
 
 # ========= USERS COMMAND =========
 
 @bot.message_handler(commands=['users'])
 def total_users(message):
 
+    count = users_collection.count_documents({})
+
     bot.reply_to(
         message,
-        f"Total Users: {len(users)}"
+        f"Total Users: {count}"
     )
 
-# ========= UNIVERSAL BROADCAST =========
+# ========= BROADCAST =========
 
 @bot.message_handler(commands=['broadcast'])
 def broadcast(message):
@@ -73,7 +129,7 @@ def broadcast(message):
 
         bot.reply_to(
             message,
-            "Kisi bhi message/photo/video pe reply karke /broadcast bhejo"
+            "Reply karke /broadcast bhejo"
         )
         return
 
@@ -81,7 +137,11 @@ def broadcast(message):
 
     sent = 0
 
-    for user in users:
+    all_users = users_collection.find()
+
+    for user in all_users:
+
+        user_id = user["user_id"]
 
         try:
 
@@ -89,40 +149,34 @@ def broadcast(message):
             if msg.text:
 
                 bot.send_message(
-                    user,
+                    user_id,
                     msg.text
                 )
 
             # PHOTO
             elif msg.photo:
 
-                photo_id = msg.photo[-1].file_id
-
                 bot.send_photo(
-                    user,
-                    photo_id,
+                    user_id,
+                    msg.photo[-1].file_id,
                     caption=msg.caption
                 )
 
             # VIDEO
             elif msg.video:
 
-                video_id = msg.video.file_id
-
                 bot.send_video(
-                    user,
-                    video_id,
+                    user_id,
+                    msg.video.file_id,
                     caption=msg.caption
                 )
 
             # DOCUMENT
             elif msg.document:
 
-                doc_id = msg.document.file_id
-
                 bot.send_document(
-                    user,
-                    doc_id,
+                    user_id,
+                    msg.document.file_id,
                     caption=msg.caption
                 )
 
@@ -136,10 +190,38 @@ def broadcast(message):
         f"Broadcast Sent To {sent} Users ✅"
     )
 
-# ========= BOT START =========
+# ========= WEBHOOK =========
+
+@app.route(f"/{TOKEN}", methods=['POST'])
+def webhook():
+
+    json_str = request.get_data().decode('UTF-8')
+
+    update = telebot.types.Update.de_json(json_str)
+
+    bot.process_new_updates([update])
+
+    return "OK", 200
+
+# ========= HOME =========
+
+@app.route('/')
+def home():
+    return "Bot Running ✅"
+
+# ========= START =========
 
 print("Bot Started ✅")
 
-keep_alive()
+bot.remove_webhook()
 
-bot.infinity_polling(skip_pending=True)
+RENDER_URL = "https://YOUR-RENDER-URL.onrender.com"
+
+bot.set_webhook(
+    url=f"{RENDER_URL}/{TOKEN}"
+)
+
+app.run(
+    host="0.0.0.0",
+    port=int(os.environ.get("PORT", 10000))
+)
