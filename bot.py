@@ -4,29 +4,24 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pymongo import MongoClient
 import os
 
-# ================= TOKEN =================
-
 TOKEN = "8702770051:AAGt1WgLNqYKprabfI7hEDA14qzQnThvpQQ"
-
-# ================= MONGODB =================
 
 MONGO_URL = "mongodb+srv://pkumari969468_db_user:8WfLlHMlDH7syb4G@teligrambot.ec5liii.mongodb.net/?retryWrites=true&w=majority&appName=Teligrambot"
 
-client = MongoClient(MONGO_URL)
+# ================= SAFE MONGODB =================
+
+client = MongoClient(
+    MONGO_URL,
+    serverSelectionTimeoutMS=5000
+)
 
 db = client["telegram_bot"]
 
 users_collection = db["users"]
 
-# ================= ADMIN =================
-
-ADMIN_ID = 123456789
-
 # ================= BOT =================
 
 bot = telebot.TeleBot(TOKEN)
-
-# ================= FLASK =================
 
 app = Flask(__name__)
 
@@ -35,17 +30,23 @@ app = Flask(__name__)
 @bot.message_handler(commands=['start'])
 def start(message):
 
-    user_id = message.chat.id
+    try:
 
-    existing_user = users_collection.find_one(
-        {"user_id": user_id}
-    )
+        user_id = message.chat.id
 
-    if not existing_user:
-
-        users_collection.insert_one(
+        existing_user = users_collection.find_one(
             {"user_id": user_id}
         )
+
+        if not existing_user:
+
+            users_collection.insert_one(
+                {"user_id": user_id}
+            )
+
+    except Exception as e:
+
+        print("MongoDB Error:", e)
 
     markup = InlineKeyboardMarkup()
 
@@ -85,121 +86,24 @@ def start(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
 
-    if call.data == "indian":
+    links = {
+
+        "indian": "https://t.me/+-FNft_vu2bVlMjA1",
+
+        "pakistani": "https://t.me/+Kv6gjLUO31Q3Yzg1",
+
+        "russian": "https://t.me/+Os2eJeUY4S5kZTRl",
+
+        "latest": "https://t.me/+UPBBtW3bii8xZDdl"
+
+    }
+
+    if call.data in links:
 
         bot.send_message(
             call.message.chat.id,
-            "https://t.me/+-FNft_vu2bVlMjA1"
+            links[call.data]
         )
-
-    elif call.data == "pakistani":
-
-        bot.send_message(
-            call.message.chat.id,
-            "https://t.me/+Kv6gjLUO31Q3Yzg1"
-        )
-
-    elif call.data == "russian":
-
-        bot.send_message(
-            call.message.chat.id,
-            "https://t.me/+Os2eJeUY4S5kZTRl"
-        )
-
-    elif call.data == "latest":
-
-        bot.send_message(
-            call.message.chat.id,
-            "https://t.me/+UPBBtW3bii8xZDdl"
-        )
-
-# ================= USERS =================
-
-@bot.message_handler(commands=['users'])
-def users(message):
-
-    if message.chat.id != ADMIN_ID:
-
-        return
-
-    total = users_collection.count_documents({})
-
-    bot.reply_to(
-        message,
-        f"Total Users: {total}"
-    )
-
-# ================= BROADCAST =================
-
-@bot.message_handler(commands=['broadcast'])
-def broadcast(message):
-
-    if message.chat.id != ADMIN_ID:
-
-        return
-
-    if not message.reply_to_message:
-
-        bot.reply_to(
-            message,
-            "Reply to a message with /broadcast"
-        )
-
-        return
-
-    msg = message.reply_to_message
-
-    sent = 0
-
-    users = users_collection.find()
-
-    for user in users:
-
-        user_id = user["user_id"]
-
-        try:
-
-            if msg.text:
-
-                bot.send_message(
-                    user_id,
-                    msg.text
-                )
-
-            elif msg.photo:
-
-                bot.send_photo(
-                    user_id,
-                    msg.photo[-1].file_id,
-                    caption=msg.caption
-                )
-
-            elif msg.video:
-
-                bot.send_video(
-                    user_id,
-                    msg.video.file_id,
-                    caption=msg.caption
-                )
-
-            elif msg.document:
-
-                bot.send_document(
-                    user_id,
-                    msg.document.file_id,
-                    caption=msg.caption
-                )
-
-            sent += 1
-
-        except Exception as e:
-
-            print(e)
-
-    bot.reply_to(
-        message,
-        f"Broadcast Sent To {sent} Users ✅"
-    )
 
 # ================= WEBHOOK =================
 
@@ -218,7 +122,7 @@ def webhook():
 
     except Exception as e:
 
-        print(e)
+        print("Webhook Error:", e)
 
         return "ERROR", 500
 
@@ -229,7 +133,7 @@ def home():
 
     return "Bot Running ✅"
 
-# ================= START BOT =================
+# ================= START =================
 
 print("Bot Started ✅")
 
@@ -242,4 +146,4 @@ bot.set_webhook(
 app.run(
     host="0.0.0.0",
     port=int(os.environ.get("PORT", 10000))
-            )
+        )
