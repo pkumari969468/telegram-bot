@@ -6,7 +6,7 @@ import time
 
 # ================= TOKEN =================
 
-TOKEN = "8702770051:AAGOZqOSi62PQmcYYdibmqVu3lwd-J4WmtU"
+TOKEN = "8702770051:AAGt1WgLNqYKprabfI7hEDA14qzQnThvpQQ"
 
 # ================= MONGODB =================
 
@@ -184,6 +184,7 @@ def broadcast(message):
             sent += 1
 
         except Exception as e:
+
             print(e)
 
     bot.reply_to(
@@ -196,20 +197,29 @@ def broadcast(message):
 @app.route(f"/{TOKEN}", methods=['POST'])
 def webhook():
 
-    print("Webhook Hit")
+    try:
 
-    json_str = request.get_data().decode('UTF-8')
+        print("Webhook Hit")
 
-    update = telebot.types.Update.de_json(json_str)
+        json_str = request.get_data().decode('UTF-8')
 
-    bot.process_new_updates([update])
+        update = telebot.types.Update.de_json(json_str)
 
-    return "OK", 200
+        bot.process_new_updates([update])
+
+        return "OK", 200
+
+    except Exception as e:
+
+        print(e)
+
+        return "ERROR", 500
 
 # ================= HOME =================
 
 @app.route('/')
 def home():
+
     return "Bot Running ✅"
 
 # ================= START =================
@@ -229,4 +239,4 @@ bot.set_webhook(
 app.run(
     host="0.0.0.0",
     port=int(os.environ.get("PORT", 10000))
-)
+    )
